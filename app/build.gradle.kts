@@ -4,10 +4,10 @@ plugins {
 }
 
 android {
-    namespace = "home.replace_me"
+    namespace = "home.bluetooth_scanner"
     compileSdk = 35
     defaultConfig {
-        applicationId = "home.replace_me"
+        applicationId = "home.bluetooth_scanner"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

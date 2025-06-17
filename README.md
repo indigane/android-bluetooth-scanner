@@ -1,1 +1,1 @@
-# android-template
+# Bluetooth scanner
