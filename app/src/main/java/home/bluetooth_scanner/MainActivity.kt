@@ -146,15 +146,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun hasPermissions(): Boolean {
+        Log.d("MainActivity", "Checking permissions...")
+        if (PERMISSIONS.isEmpty()){
+             Log.w("MainActivity", "PERMISSIONS array is empty, this should not happen.")
+             return false // Or true, depending on desired behavior for empty array
+        }
         for (permission in PERMISSIONS) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+            val granted = ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+            Log.d("MainActivity", "Checking permission: $permission, Granted: $granted")
+            if (!granted) {
+                Log.w("MainActivity", "Permission not granted: $permission")
                 return false
             }
         }
+        Log.i("MainActivity", "All required permissions are granted.")
         return true
     }
 
     private fun requestPermissions() {
+        Log.i("MainActivity", "Requesting permissions: ${PERMISSIONS.joinToString(", ")}")
         ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_PERMISSIONS)
     }
 
