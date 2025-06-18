@@ -1,4 +1,4 @@
-package home.replace_me
+package home.bluetooth_scanner
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
