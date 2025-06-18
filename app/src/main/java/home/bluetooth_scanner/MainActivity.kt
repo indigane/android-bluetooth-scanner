@@ -15,7 +15,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import android.app.Activity
 import android.content.Intent
-import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -26,7 +25,7 @@ class MainActivity : AppCompatActivity() {
     private var bluetoothLeScanner: BluetoothLeScanner? = null
     private val discoveredDevices = mutableListOf<BleDevice>()
     private lateinit var bleDeviceAdapter: BleDeviceAdapter
-    private lateinit var debugTextView: TextView
+    // Removed: private lateinit var debugTextView: TextView
 
     private val leScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -42,8 +41,7 @@ class MainActivity : AppCompatActivity() {
                     "Device Name: ${result.device?.name ?: "N/A"}, " +
                     "Address: ${result.device?.address ?: "N/A"}, " +
                     "RSSI: ${result.rssi}, " +
-                    "isConnectable: ${result.isConnectable}, " + // isConnectable requires API 26 for ScanResult
-                    "ScanRecord: ${result.scanRecord?.bytes?.joinToString(":") { String.format("%02X", it) } ?: "N/A"}")
+                    "isConnectable: ${result.isConnectable}") // Removed ScanRecord
 
             val deviceAddress = result.device?.address
             if (deviceAddress == null) {
@@ -77,21 +75,12 @@ class MainActivity : AppCompatActivity() {
 
             // Ensure UI updates and list modifications for the adapter are on the main thread
             runOnUiThread {
-                Log.d("ScanCallback", "Inside runOnUiThread: Processing devices for UI update.") // Corrected log message
+                Log.d("ScanCallback", "Inside runOnUiThread: Processing devices for UI update.")
 
                 // Sort the list first
                 discoveredDevices.sortWith(compareByDescending<BleDevice> { it.smoothedRssi }.thenBy { it.address })
 
-                // Update debug text with the top device after sorting
-                if (discoveredDevices.isNotEmpty()) {
-                    val topDevice = discoveredDevices[0]
-                    val debugText = "Top Device: ${topDevice.name ?: "Unknown"} (${topDevice.address}) | Smoothed RSSI: ${String.format("%.2f", topDevice.smoothedRssi)}"
-                    debugTextView.text = debugText
-                    Log.d("MainActivityDebug", "DebugTextView updated with top device: $debugText")
-                } else {
-                    debugTextView.text = "Debug: No devices yet..."
-                    Log.d("MainActivityDebug", "DebugTextView: No devices yet.")
-                }
+                // Removed debug text update block
 
                 // Submit the sorted list to the adapter
                 bleDeviceAdapter.submitList(discoveredDevices.toList())
@@ -107,12 +96,8 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             Log.i("ScanCallback", "Batch Scan Results: ${results.size} devices found.")
-            for (result in results) {
-                // Log summary for each result in batch, similar to onScanResult
-                Log.i("ScanCallback", "  Batch Result - Device: ${result.device?.name ?: "N/A"}, Address: ${result.device?.address ?: "N/A"}, RSSI: ${result.rssi}")
-                // TODO: Process each result if batching is actively used and devices need individual handling
-                // For now, if processing is added, ensure thread safety for discoveredDevices list.
-            }
+            // Detailed per-result processing for batch results is not implemented.
+            // onScanResult is used for individual device processing.
         }
 
         override fun onScanFailed(errorCode: Int) {
@@ -147,15 +132,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun hasPermissions(): Boolean {
         Log.d("MainActivity", "Checking permissions...")
-        if (PERMISSIONS.isEmpty()){
-             Log.w("MainActivity", "PERMISSIONS array is empty, this should not happen.")
-             return false // Or true, depending on desired behavior for empty array
-        }
+        // Removed PERMISSIONS.isEmpty() check as for loop handles it.
         for (permission in PERMISSIONS) {
-            val granted = ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
-            Log.d("MainActivity", "Checking permission: $permission, Granted: $granted")
-            if (!granted) {
-                Log.w("MainActivity", "Permission not granted: $permission")
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                Log.w("MainActivity", "Permission not granted: $permission") // Log only the first one not granted
                 return false
             }
         }
@@ -172,7 +152,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        debugTextView = findViewById(R.id.debugTextView) // Initialize debugTextView
+        // Removed: debugTextView = findViewById(R.id.debugTextView)
         bleDeviceAdapter = BleDeviceAdapter()
         val recyclerView: RecyclerView = findViewById(R.id.devicesRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -201,7 +181,7 @@ class MainActivity : AppCompatActivity() {
     private fun checkBluetoothStateAndStartScan() {
         if (bluetoothAdapter == null) {
             Log.e("MainActivity", "BluetoothAdapter not initialized")
-            // Potentially show a toast or dialog to the user
+            // Consider user feedback for this critical error (e.g., a Toast or Dialog).
             return
         }
 
@@ -215,10 +195,10 @@ class MainActivity : AppCompatActivity() {
                     startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
                 } else {
                     Log.e("MainActivity", "BLUETOOTH_CONNECT permission not granted, cannot request to enable Bluetooth.")
-                    // Optionally inform the user they need to grant BLUETOOTH_CONNECT or enable BT manually
+                    // Consider informing user they need to grant BLUETOOTH_CONNECT or enable BT manually.
                 }
             } else {
-                // For older APIs, no specific BLUETOOTH_CONNECT permission needed for this action
+                // For older Android versions, no specific BLUETOOTH_CONNECT permission needed for this action.
                 startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
             }
         } else {
@@ -235,7 +215,7 @@ class MainActivity : AppCompatActivity() {
                 startBleScan()
             } else {
                 Log.w("MainActivity", "User did not enable Bluetooth or cancelled the request.")
-                // Optionally, show a message to the user that Bluetooth is required.
+                // Consider showing a message to the user that Bluetooth is required for BLE scanning.
             }
         }
     }
@@ -248,38 +228,37 @@ class MainActivity : AppCompatActivity() {
                 checkBluetoothStateAndStartScan()
             } else {
                 Log.w("MainActivity", "Not all permissions were granted by user.")
-                // Handle permission denial, e.g., show an explanation to the user.
+                // Consider showing an explanation to the user about why permissions are needed.
             }
         }
     }
 
     private fun startBleScan() {
         Log.d("MainActivity", "Attempting to start BLE scan...")
-        if (!hasPermissions()) { // Double check permissions
+        if (!hasPermissions()) {
             Log.w("MainActivity", "Attempted to start scan without all permissions.")
-            requestPermissions() // Or inform user
+            requestPermissions() // Or inform user about the need for permissions.
             return
         }
 
         if (bluetoothAdapter == null || !bluetoothAdapter!!.isEnabled) {
             Log.w("MainActivity", "Bluetooth adapter not available or not enabled. Cannot start scan.")
-            // Optionally call checkBluetoothStateAndStartScan() again or inform user
+            // Optionally, can call checkBluetoothStateAndStartScan() to re-trigger enable flow, or inform user.
             return
         }
 
-        // Check BLUETOOTH_SCAN permission before starting scan (API 31+)
+        // Defensive check for BLUETOOTH_SCAN permission (API 31+), though hasPermissions() should cover it.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
                 Log.e("MainActivity", "BLUETOOTH_SCAN permission not granted. Cannot start scan.")
-                // This should ideally be caught by hasPermissions(), but good for defense.
                 return
             }
         }
 
         Log.i("MainActivity", "Starting BLE scan.")
-        // Consider adding scan settings or filters if needed, for now, default scan
+        // Scan settings or filters can be added here if specific scanning behavior is needed.
         bluetoothLeScanner?.startScan(leScanCallback)
-        // Add a state variable like isScanning = true if you want to manage UI based on scanning state
+        // An 'isScanning' state variable could be managed here for UI updates.
     }
 
     private fun stopBleScan() {
@@ -288,9 +267,8 @@ class MainActivity : AppCompatActivity() {
              Log.w("MainActivity", "Bluetooth adapter not available or not enabled. Cannot stop scan.")
              return
         }
-        // Check BLUETOOTH_SCAN permission before stopping scan (API 31+)
-        // Note: stopScan might not strictly require SCAN permission if it was granted for start,
-        // but it's good practice to log if it's missing.
+        // Check BLUETOOTH_SCAN permission before stopping scan (API 31+).
+        // While stopScan might not strictly require it if startScan did, logging helps ensure consistency.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
                 Log.e("MainActivity", "BLUETOOTH_SCAN permission not granted. Cannot stop scan effectively.")
@@ -298,7 +276,7 @@ class MainActivity : AppCompatActivity() {
         }
         bluetoothLeScanner?.stopScan(leScanCallback)
         Log.i("MainActivity", "BLE scan stopped.")
-        // isScanning = false
+        // 'isScanning' state variable could be updated here.
     }
 
     companion object {

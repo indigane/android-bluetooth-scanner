@@ -1,6 +1,6 @@
 package home.bluetooth_scanner
 
-private const val RSSI_HISTORY_MAX_SIZE = 5 // Or 10
+private const val RSSI_HISTORY_MAX_SIZE = 5 // Decided value for history size
 
 data class BleDevice(
     val address: String,
