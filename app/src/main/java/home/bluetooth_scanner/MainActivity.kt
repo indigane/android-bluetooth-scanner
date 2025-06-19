@@ -10,6 +10,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -26,6 +28,9 @@ class MainActivity : AppCompatActivity() {
     private val discoveredDevices = mutableListOf<BleDevice>()
     private lateinit var bleDeviceAdapter: BleDeviceAdapter
     // Removed: private lateinit var debugTextView: TextView
+
+    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var cleanupRunnable: Runnable
 
     private val leScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -160,6 +165,25 @@ class MainActivity : AppCompatActivity() {
         val recyclerView: RecyclerView = findViewById(R.id.devicesRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = bleDeviceAdapter
+        recyclerView.itemAnimator = ShrinkRemoveItemAnimator()
+
+        cleanupRunnable = Runnable {
+            val currentTime = System.currentTimeMillis()
+            val initialSize = discoveredDevices.size
+            discoveredDevices.removeAll { device ->
+                (currentTime - device.lastSeen) > DEVICE_TIMEOUT_MS
+            }
+
+            if (discoveredDevices.size < initialSize) {
+                // Sort the list first
+                discoveredDevices.sortWith(compareByDescending<BleDevice> { it.smoothedRssi }.thenBy { it.address })
+                // Submit the updated list to the adapter
+                bleDeviceAdapter.submitList(discoveredDevices.toList())
+                Log.d("CleanupRunnable", "Removed ${initialSize - discoveredDevices.size} timed-out devices. New count: ${discoveredDevices.size}")
+            }
+            // Reschedule the cleanup task
+            handler.postDelayed(cleanupRunnable, CLEANUP_INTERVAL_MS)
+        }
 
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager.adapter // Initialize class member
@@ -261,11 +285,13 @@ class MainActivity : AppCompatActivity() {
         Log.i("MainActivity", "Starting BLE scan.")
         // Scan settings or filters can be added here if specific scanning behavior is needed.
         bluetoothLeScanner?.startScan(leScanCallback)
+        handler.postDelayed(cleanupRunnable, CLEANUP_INTERVAL_MS) // Start cleanup task
         // An 'isScanning' state variable could be managed here for UI updates.
     }
 
     private fun stopBleScan() {
         Log.d("MainActivity", "Attempting to stop BLE scan...")
+        handler.removeCallbacks(cleanupRunnable) // Stop cleanup task
         if (bluetoothAdapter == null || !bluetoothAdapter!!.isEnabled) {
              Log.w("MainActivity", "Bluetooth adapter not available or not enabled. Cannot stop scan.")
              return
@@ -282,8 +308,29 @@ class MainActivity : AppCompatActivity() {
         // 'isScanning' state variable could be updated here.
     }
 
+    override fun onPause() {
+        super.onPause()
+        stopBleScan() // Also ensures cleanupRunnable is removed
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // If returning to the app and permissions are already granted,
+        // and Bluetooth is on, the scan (and cleanup) should restart.
+        if (hasPermissions() && bluetoothAdapter?.isEnabled == true) {
+            startBleScan()
+        } else if (hasPermissions() && bluetoothAdapter?.isEnabled == false) {
+            // If permissions are there but BT is off, prompt to enable it.
+            // checkBluetoothStateAndStartScan will handle starting the scan if BT is enabled.
+            checkBluetoothStateAndStartScan()
+        }
+        // If permissions are not granted, onCreate -> requestPermissions -> onRequestPermissionsResult -> checkBluetoothStateAndStartScan will handle it.
+    }
+
     companion object {
         private const val REQUEST_PERMISSIONS = 1
         private const val REQUEST_ENABLE_BT = 2
+        private const val DEVICE_TIMEOUT_MS = 15000L // 15 seconds
+        private const val CLEANUP_INTERVAL_MS = 5000L // 5 seconds
     }
 }

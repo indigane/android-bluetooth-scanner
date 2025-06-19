@@ -7,7 +7,8 @@ data class BleDevice(
     val name: String?,
     val currentRssi: Int,
     val rssiHistory: List<Int>,
-    val smoothedRssi: Double
+    val smoothedRssi: Double,
+    val lastSeen: Long
 ) {
     companion object {
         fun create(address: String, name: String?, initialRssi: Int): BleDevice {
@@ -16,7 +17,8 @@ data class BleDevice(
                 name = name,
                 currentRssi = initialRssi,
                 rssiHistory = listOf(initialRssi),
-                smoothedRssi = initialRssi.toDouble()
+                smoothedRssi = initialRssi.toDouble(),
+                lastSeen = System.currentTimeMillis()
             )
         }
     }
@@ -32,7 +34,8 @@ data class BleDevice(
         return this.copy(
             currentRssi = newRssiValue,
             rssiHistory = newHistory,
-            smoothedRssi = newSmoothedRssi
+            smoothedRssi = newSmoothedRssi,
+            lastSeen = System.currentTimeMillis()
             // name and address are copied from the existing object via this.copy
         )
     }
