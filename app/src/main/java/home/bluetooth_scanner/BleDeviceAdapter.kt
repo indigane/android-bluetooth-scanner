@@ -31,7 +31,7 @@ class BleDeviceAdapter : ListAdapter<BleDevice, BleDeviceAdapter.BleDeviceViewHo
             Log.d("BleDeviceViewHolder", "Binding device: ${device.name}, Address: ${device.address}, Smoothed RSSI: ${device.smoothedRssi}")
             deviceNameTextView.text = device.name ?: "Unknown Device"
             deviceAddressTextView.text = device.address
-            deviceRssiTextView.text = String.format("RSSI: %.2f dBm", device.smoothedRssi)
+            deviceRssiTextView.text = String.format("%.0f dBm", device.smoothedRssi)
         }
     }
 }
