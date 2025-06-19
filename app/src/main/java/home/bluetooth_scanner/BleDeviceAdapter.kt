@@ -1,5 +1,6 @@
 package home.bluetooth_scanner
 
+import java.lang.Math
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -40,9 +41,12 @@ class BleDeviceDiffCallback : DiffUtil.ItemCallback<BleDevice>() {
     }
 
     override fun areContentsTheSame(oldItem: BleDevice, newItem: BleDevice): Boolean {
-        // Compare relevant fields that might change and require UI update
+        val rssiDifference = Math.abs(oldItem.smoothedRssi - newItem.smoothedRssi)
+        // Consider RSSI changed if the difference is larger than a small threshold
+        val rssiChanged = rssiDifference > 0.01
+
         return oldItem.name == newItem.name &&
-               oldItem.smoothedRssi == newItem.smoothedRssi &&
-               oldItem.currentRssi == newItem.currentRssi // Include currentRssi if it can affect display indirectly
+               !rssiChanged && // If RSSI has not changed significantly
+               oldItem.currentRssi == newItem.currentRssi
     }
 }
