@@ -60,14 +60,17 @@ class MainActivity : AppCompatActivity() {
             val existingDevice = discoveredDevices.find { it.address == deviceAddress }
 
             if (existingDevice != null) {
-                existingDevice.addRssiReading(rssi)
-                // Log.d for MainActivity is fine here, or use "ScanCallback" tag for consistency
-                Log.d("ScanCallback", "Updated device: ${existingDevice.name ?: "Unknown"}, Address: ${existingDevice.address}, RSSI: ${existingDevice.currentRssi}, Smoothed RSSI: ${existingDevice.smoothedRssi}")
+                val updatedDevice = existingDevice.withNewRssiReading(rssi)
+                val index = discoveredDevices.indexOf(existingDevice)
+                if (index != -1) {
+                    discoveredDevices[index] = updatedDevice
+                }
+                Log.d("ScanCallback", "Updated device: ${updatedDevice.name ?: "Unknown"}, Address: ${updatedDevice.address}, RSSI: ${updatedDevice.currentRssi}, Smoothed RSSI: ${updatedDevice.smoothedRssi}")
             } else {
-                val newDevice = BleDevice(
+                val newDevice = BleDevice.create(
                     address = deviceAddress,
                     name = deviceName,
-                    currentRssi = rssi
+                    initialRssi = rssi
                 )
                 discoveredDevices.add(newDevice)
                 Log.d("ScanCallback", "New device: ${newDevice.name ?: "Unknown"}, Address: ${newDevice.address}, RSSI: ${newDevice.currentRssi}, Smoothed RSSI: ${newDevice.smoothedRssi}")
