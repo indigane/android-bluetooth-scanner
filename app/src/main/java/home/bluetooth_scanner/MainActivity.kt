@@ -18,6 +18,7 @@ import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 
 class MainActivity : AppCompatActivity() {
 
@@ -160,6 +161,9 @@ class MainActivity : AppCompatActivity() {
         val recyclerView: RecyclerView = findViewById(R.id.devicesRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = bleDeviceAdapter
+
+        // Add this line to disable change animations
+        (recyclerView.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
 
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager.adapter // Initialize class member
