@@ -15,11 +15,11 @@
         <ProgressBar
             android:id="@+id/rssiStrengthBar"
             style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="0dp" <!-- Occupy full width of ConstraintLayout -->
-            android:layout_height="4dp" <!-- Subtle height -->
+            android:layout_width="0dp"
+            android:layout_height="4dp"
             android:indeterminate="false"
             android:max="100"
-            android:progress="0" <!-- Start with 0 or a representative placeholder -->
+            android:progress="0"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
