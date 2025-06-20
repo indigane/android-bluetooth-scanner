@@ -1,7 +1,5 @@
 # Bluetooth Scanner
 
-## Description
-
 A minimal, free and open-source Android application that scans for nearby Bluetooth Low Energy (BLE) devices and displays them sorted by signal strength in descending order.
 
 ## Features
