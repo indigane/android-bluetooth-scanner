@@ -18,7 +18,9 @@ import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.AdapterDataObserver
 import androidx.recyclerview.widget.SimpleItemAnimator
+// import androidx.annotation.VisibleForTesting // Uncomment if you have the annotation dependency
 
 class MainActivity : AppCompatActivity() {
 
@@ -27,9 +29,11 @@ class MainActivity : AppCompatActivity() {
     private val discoveredDevices = mutableListOf<BleDevice>()
     private lateinit var bleDeviceAdapter: BleDeviceAdapter
     // Removed: private lateinit var debugTextView: TextView
+    private var topVisibleDeviceBeforeSortUpdate: BleDevice? = null
 
     private val leScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
+            this@MainActivity.topVisibleDeviceBeforeSortUpdate = null
             super.onScanResult(callbackType, result)
             Log.d("ScanCallback", "onScanResult triggered.")
             if (result == null) {
@@ -81,6 +85,26 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 Log.d("ScanCallback", "Inside runOnUiThread: Processing devices for UI update.")
 
+                val layoutManager = (findViewById<RecyclerView>(R.id.devicesRecyclerView).layoutManager as LinearLayoutManager)
+                val firstCompletelyVisibleItemPosition = layoutManager.findFirstCompletelyVisibleItemPosition()
+                if (firstCompletelyVisibleItemPosition == 0 && bleDeviceAdapter.currentList.isNotEmpty()) {
+                    // Check if currentList is not empty to avoid IndexOutOfBoundsException
+                    val currentTopDevice = bleDeviceAdapter.currentList.getOrNull(0)
+                    if (currentTopDevice != null) {
+                        this@MainActivity.topVisibleDeviceBeforeSortUpdate = currentTopDevice
+                        Log.d("MainActivity", "Stored topVisibleDeviceBeforeSortUpdate: ${currentTopDevice.address}")
+                    } else {
+                        Log.d("MainActivity", "bleDeviceAdapter.currentList was empty or item at 0 was null, not storing topVisibleDeviceBeforeSortUpdate.")
+                    }
+                } else {
+                    // Not at the top or list is empty, ensure it's null
+                    this@MainActivity.topVisibleDeviceBeforeSortUpdate = null
+                    if (firstCompletelyVisibleItemPosition != 0) {
+                        Log.d("MainActivity", "Not scrolled to top (pos: $firstCompletelyVisibleItemPosition), not storing topVisibleDeviceBeforeSortUpdate.")
+                    } else {
+                        Log.d("MainActivity", "Scrolled to top but adapter list is empty, not storing topVisibleDeviceBeforeSortUpdate.")
+                    }
+                }
                 // Sort the list first
                 discoveredDevices.sortWith(compareByDescending<BleDevice> { it.smoothedRssi }.thenBy { it.address })
 
@@ -164,6 +188,31 @@ class MainActivity : AppCompatActivity() {
 
         // Add this line to disable change animations
         (recyclerView.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
+
+        val scrollObserver = object : RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                super.onItemRangeInserted(positionStart, itemCount)
+                handleScrollAdjustment()
+            }
+
+            override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) {
+                super.onItemRangeMoved(fromPosition, toPosition, itemCount)
+                // It's possible a move operation also requires scroll adjustment,
+                // especially if items are moved to the top.
+                handleScrollAdjustment()
+            }
+
+            override fun onCurrentListChanged() {
+                // This is specific to ListAdapter and is a good place for this logic too,
+                // but onItemRangeInserted/Moved should also cover the cases.
+                // We can rely on this as a fallback or primary handler.
+                // Let's ensure handleScrollAdjustment is robust.
+                super.onCurrentListChanged()
+                 // It's important to also call it here for swaps or other changes DiffUtil might make.
+                handleScrollAdjustment()
+            }
+        }
+        bleDeviceAdapter.registerAdapterDataObserver(scrollObserver)
 
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager.adapter // Initialize class member
@@ -284,6 +333,47 @@ class MainActivity : AppCompatActivity() {
         bluetoothLeScanner?.stopScan(leScanCallback)
         Log.i("MainActivity", "BLE scan stopped.")
         // 'isScanning' state variable could be updated here.
+    }
+
+    private fun handleScrollAdjustment() {
+        val layoutManager = (findViewById<RecyclerView>(R.id.devicesRecyclerView).layoutManager as LinearLayoutManager)
+        val currentTopDevice = this@MainActivity.topVisibleDeviceBeforeSortUpdate
+
+        if (currentTopDevice != null) {
+            // Find the new position of the device we tracked
+            val newIndexOfTrackedDevice = bleDeviceAdapter.currentList.indexOfFirst { it.address == currentTopDevice.address }
+
+            if (newIndexOfTrackedDevice != -1 && newIndexOfTrackedDevice > 0) {
+                // The tracked device is still in the list and is no longer at the top.
+                // This means new items were effectively inserted above it.
+                Log.d("MainActivity", "Adjusting scroll. Tracked device ${currentTopDevice.address} moved to $newIndexOfTrackedDevice. Scrolling to top.")
+                findViewById<RecyclerView>(R.id.devicesRecyclerView).scrollToPosition(0)
+            } else if (newIndexOfTrackedDevice == 0) {
+                 Log.d("MainActivity", "No scroll adjustment needed. Tracked device ${currentTopDevice.address} is still at the top.")
+            } else {
+                 Log.d("MainActivity", "No scroll adjustment. Tracked device ${currentTopDevice.address} not found in the new list or list is empty.")
+            }
+            // Important: Reset for the next scan cycle AFTER processing.
+            this@MainActivity.topVisibleDeviceBeforeSortUpdate = null
+        } else {
+            // Log.d("MainActivity", "No scroll adjustment needed, topVisibleDeviceBeforeSortUpdate was null.")
+            // No specific device was being tracked from the previous state.
+        }
+    }
+
+    // @VisibleForTesting // Uncomment if you have the annotation dependency
+    fun getDiscoveredDevicesListForTest(): MutableList<BleDevice> {
+        return discoveredDevices
+    }
+
+    // @VisibleForTesting // Uncomment if you have the annotation dependency
+    fun setTopVisibleDeviceBeforeSortUpdateForTest(device: BleDevice?) {
+        this.topVisibleDeviceBeforeSortUpdate = device
+    }
+
+    // @VisibleForTesting // Uncomment if you have the annotation dependency
+    fun getTopVisibleDeviceBeforeSortUpdateForTest(): BleDevice? {
+        return this.topVisibleDeviceBeforeSortUpdate
     }
 
     companion object {
