@@ -37,4 +37,4 @@ If you'd like to improve the app or add new features, please follow these genera
 
 ## License
 
-This project is licensed under The Unlicense.
+This project is licensed under the MIT-0 license.
