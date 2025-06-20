@@ -29,6 +29,12 @@ jobs:
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
 
+      # --- DEBUG STEP 2: Verify the file was created ---
+      - name: Check for Keystore File (Temporary Debug)
+        run: |
+          echo "--- Checking for keystore file in $HOME ---"
+          ls -lah $HOME
+
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
