@@ -12,6 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
+        <!-- ProgressBar for signal strength -->
         <ProgressBar
             android:id="@+id/rssiStrengthBar"
             style="?android:attr/progressBarStyleHorizontal"
@@ -31,33 +32,33 @@
             android:textAppearance="?attr/textAppearanceBody2"
             android:textColor="?android:attr/textColorSecondary"
             android:text="-XX dBm"
-            app:layout_constraintStart_toStartOf="parent" <!-- Aligns with ProgressBar start -->
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/rssiStrengthBar"
-            android:layout_marginTop="8dp" <!-- Space between ProgressBar and this TextView -->
-            android:layout_marginEnd="8dp"/> <!-- Space to the right of RSSI text -->
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"/>
 
         <TextView
             android:id="@+id/deviceName"
-            android:layout_width="0dp" <!-- Allow wrapping if name is long -->
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textAppearance="?attr/textAppearanceHeadline6"
             android:text="Device Name"
             app:layout_constraintStart_toEndOf="@+id/deviceRssi"
-            app:layout_constraintEnd_toEndOf="parent" <!-- Allow to take remaining space -->
-            app:layout_constraintBaseline_toBaselineOf="@+id/deviceRssi" <!-- CORRECTED ATTRIBUTE -->
-            android:layout_marginStart="8dp"/> <!-- Space between RSSI text and Device Name -->
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBaseline_toBaselineOf="@+id/deviceRssi"
+            android:layout_marginStart="8dp"/>
 
         <TextView
             android:id="@+id/deviceAddress"
-            android:layout_width="0dp" <!-- Allow wrapping -->
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textAppearance="?attr/textAppearanceBody2"
             android:textColor="?android:attr/textColorSecondary"
             android:text="Device Address"
-            app:layout_constraintStart_toEndOf="@+id/deviceRssi" <!-- Aligns with deviceName start -->
-            app:layout_constraintEnd_toEndOf="parent" <!-- Allow to take remaining space -->
+            app:layout_constraintStart_toEndOf="@+id/deviceRssi"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/deviceName"
-            android:layout_marginStart="8dp"/> <!-- Space consistent with deviceName's start -->
+            android:layout_marginStart="8dp"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>
