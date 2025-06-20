@@ -44,7 +44,6 @@ class BleDeviceDiffCallback : DiffUtil.ItemCallback<BleDevice>() {
     override fun areContentsTheSame(oldItem: BleDevice, newItem: BleDevice): Boolean {
         // Compare relevant fields that might change and require UI update
         return oldItem.name == newItem.name &&
-               oldItem.smoothedRssi == newItem.smoothedRssi &&
-               oldItem.currentRssi == newItem.currentRssi
+               oldItem.smoothedRssi == newItem.smoothedRssi
     }
 }
