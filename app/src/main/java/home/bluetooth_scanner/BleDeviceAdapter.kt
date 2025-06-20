@@ -1,11 +1,14 @@
 package home.bluetooth_scanner
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -34,6 +37,16 @@ class BleDeviceAdapter : ListAdapter<BleDevice, BleDeviceAdapter.BleDeviceViewHo
             deviceNameTextView.text = device.name ?: "Unknown Device"
             deviceAddressTextView.text = device.address
             deviceRssiTextView.text = String.format("%.0f dBm", device.smoothedRssi)
+
+            itemView.setOnClickListener {
+                val context = itemView.context
+                val clipboardManager =
+                    context.getSystemService(ClipboardManager::class.java) as ClipboardManager
+                val clipData = ClipData.newPlainText("MAC Address", device.address)
+                clipboardManager.setPrimaryClip(clipData)
+                Toast.makeText(context, context.getString(R.string.mac_address_copied), Toast.LENGTH_SHORT)
+                    .show()
+            }
 
             // Logic for RSSI strength bar
             // Note: RSSI is typically negative. Closer to 0 is stronger.

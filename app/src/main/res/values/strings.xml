@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Bluetooth scanner</string>
+    <string name="mac_address_copied">MAC address copied to clipboard</string>
 </resources>
