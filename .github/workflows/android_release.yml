@@ -26,6 +26,8 @@ jobs:
       - name: Decode Keystore
         run: |
           echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > $HOME/release.p12
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
