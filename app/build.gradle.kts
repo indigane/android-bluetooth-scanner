@@ -11,7 +11,7 @@ fun getGitUserSuffix(): String {
         // Regex for git@github.com:owner/repo and https://github.com/owner/repo capturing the owner
         val regex = Regex("[:/]([^/]+)/[^/]+\\.git$")
         val matchResult = regex.find(remoteUrl)
-        return matchResult?.groups?.get(1)?.value?.toLowerCase()?.let { ".$it" } ?: ""
+        return matchResult?.groups?.get(1)?.value?.lowercase()?.let { ".$it" } ?: ""
     } catch (e: Exception) {
         println("Could not get git user: ${e.message}")
         return ".local"
@@ -31,7 +31,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
-        release {
+        create("release") {
             if (System.getenv("KEYSTORE_PATH") != null) {
                 storeFile = file(System.getenv("KEYSTORE_PATH"))
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
@@ -42,12 +42,12 @@ android {
         }
     }
     buildTypes {
-        release {
+        getByName("release") {
             applicationIdSuffix = getGitUserSuffix()
-            signingConfig = signingConfigs.release
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
         }
-        debug {
+        getByName("debug") {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
