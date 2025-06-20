@@ -201,16 +201,6 @@ class MainActivity : AppCompatActivity() {
                 // especially if items are moved to the top.
                 handleScrollAdjustment()
             }
-
-            override fun onCurrentListChanged() {
-                // This is specific to ListAdapter and is a good place for this logic too,
-                // but onItemRangeInserted/Moved should also cover the cases.
-                // We can rely on this as a fallback or primary handler.
-                // Let's ensure handleScrollAdjustment is robust.
-                super.onCurrentListChanged()
-                 // It's important to also call it here for swaps or other changes DiffUtil might make.
-                handleScrollAdjustment()
-            }
         }
         bleDeviceAdapter.registerAdapterDataObserver(scrollObserver)
 
