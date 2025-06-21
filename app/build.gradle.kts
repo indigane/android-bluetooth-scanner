@@ -9,7 +9,6 @@ fun getGitUserSuffix(): String {
         val remoteUrl = process.inputStream.bufferedReader().readText().trim()
         process.waitFor()
         // Regex for git@github.com:owner/repo and https://github.com/owner/repo capturing the owner
-        // Now also handles optional .git suffix and optional trailing slash
         val regex = Regex("[:/]([^/]+)/[^/]+(\\.git)?/?$")
         val matchResult = regex.find(remoteUrl)
         return matchResult?.groups?.get(1)?.value?.lowercase()?.let { ".$it" } ?: ".local"
