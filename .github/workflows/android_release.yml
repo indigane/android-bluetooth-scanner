@@ -39,12 +39,15 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build with Gradle (Release APK)
-        run: ./gradlew assembleRelease
         env:
-          KEYSTORE_PATH: ${{ env.HOME }}/release.p12
+          # KEYSTORE_PATH will be set in the run command using shell expansion
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          export KEYSTORE_PATH="$HOME/release.p12"
+          echo "KEYSTORE_PATH is set to: $KEYSTORE_PATH"
+          ./gradlew assembleRelease
 
       - name: Create GitHub Release
         id: create_release
