@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var locationPermissionText: TextView
     private lateinit var requestLocationPermissionButton: Button
     private lateinit var devicesRecyclerView: RecyclerView
+    private lateinit var permissionRequestContainer: View
 
 
     private val leScanCallback = object : ScanCallback() {
@@ -187,9 +188,11 @@ class MainActivity : AppCompatActivity() {
         requestLocationPermissionButton.visibility = if (locationGranted) View.GONE else View.VISIBLE
 
         if (nearbyGranted && locationGranted) {
+            permissionRequestContainer.visibility = View.GONE
             devicesRecyclerView.visibility = View.VISIBLE
             checkBluetoothStateAndStartScan()
         } else {
+            permissionRequestContainer.visibility = View.VISIBLE
             devicesRecyclerView.visibility = View.GONE
             // Stop scan if it's running and permissions are revoked
             if (bluetoothLeScanner != null && (bluetoothAdapter?.isEnabled == true)) {
@@ -217,6 +220,7 @@ class MainActivity : AppCompatActivity() {
         locationPermissionText = findViewById(R.id.locationPermissionText)
         requestLocationPermissionButton = findViewById(R.id.requestLocationPermissionButton)
         devicesRecyclerView = findViewById(R.id.devicesRecyclerView)
+        permissionRequestContainer = findViewById(R.id.permissionRequestContainer)
 
         bleDeviceAdapter = BleDeviceAdapter()
         devicesRecyclerView.layoutManager = LinearLayoutManager(this)

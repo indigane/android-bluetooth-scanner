@@ -9,49 +9,61 @@
     android:fitsSystemWindows="true"
     tools:context="home.bluetooth_scanner.MainActivity">
 
-    <TextView
-        android:id="@+id/nearbyDevicesPermissionText"
+    <LinearLayout
+        android:id="@+id/permissionRequestContainer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="This app requires 'Nearby Devices' permission to scan for Bluetooth LE devices."
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
         android:visibility="gone"
-        tools:visibility="visible" />
+        tools:visibility="visible">
 
-    <Button
-        android:id="@+id/requestNearbyDevicesPermissionButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="8dp"
-        android:text="Grant Nearby Devices Permission"
-        android:visibility="gone"
-        tools:visibility="visible" />
+        <TextView
+            android:id="@+id/nearbyDevicesPermissionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="This app needs 'Nearby Devices' permission (for Bluetooth Scan and Connect) to find and show nearby Bluetooth LE devices. This app does not have network permission, so any scanned data stays on your device and cannot be sent out."
+            android:visibility="gone"
+            android:layout_marginBottom="8dp"
+            tools:visibility="visible" />
 
-    <TextView
-        android:id="@+id/locationPermissionText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="This app requires 'Location' permission to discover Bluetooth LE devices. Bluetooth scanning can be used to determine your location."
-        android:visibility="gone"
-        tools:visibility="visible" />
+        <Button
+            android:id="@+id/requestNearbyDevicesPermissionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="Grant Nearby Devices Permission"
+            android:visibility="gone"
+            tools:visibility="visible" />
 
-    <Button
-        android:id="@+id/requestLocationPermissionButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="8dp"
-        android:text="Grant Location Permission"
-        android:visibility="gone"
-        tools:visibility="visible" />
+        <TextView
+            android:id="@+id/locationPermissionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:text="While this app doesn't need or request your exact location, Android requires the Location permission because Bluetooth scanning *could* theoretically be used to determine your location, even though this app does not do so. This permission is solely for enabling Bluetooth device discovery. This app does not have network permission, so any scanned data stays on your device and cannot be sent out."
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <Button
+            android:id="@+id/requestLocationPermissionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:text="Grant Location Permission"
+            android:visibility="gone"
+            tools:visibility="visible" />
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/devicesRecyclerView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="16dp"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        tools:visibility="visible"
         tools:listitem="@layout/item_ble_device" />
 
 </LinearLayout>
