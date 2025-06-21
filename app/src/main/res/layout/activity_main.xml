@@ -23,7 +23,7 @@
             android:id="@+id/nearbyDevicesPermissionText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="This app needs 'Nearby Devices' permission (for Bluetooth Scan and Connect) to find and show nearby Bluetooth LE devices. This app does not have network permission, so any scanned data stays on your device and cannot be sent out."
+            android:text="This app needs 'Nearby Devices' permission (for Bluetooth Scan and Connect) to find and show nearby Bluetooth LE devices."
             android:visibility="gone"
             android:layout_marginBottom="8dp"
             tools:visibility="visible" />
@@ -43,7 +43,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="8dp"
-            android:text="While this app doesn't need or request your exact location, Android requires the Location permission because Bluetooth scanning *could* theoretically be used to determine your location, even though this app does not do so. This permission is solely for enabling Bluetooth device discovery. This app does not have network permission, so any scanned data stays on your device and cannot be sent out."
+            android:text="While this app doesn't need or request your exact location, Android requires the Location permission because Bluetooth scanning *could* be used to determine your location. This permission is solely for enabling Bluetooth device discovery. This app does not have network permission, so any scanned data stays on your device and cannot be sent out."
             android:visibility="gone"
             tools:visibility="visible" />
 
