@@ -52,6 +52,10 @@ jobs:
           CLEAN_TAG=${{ github.event.inputs.tagName }}
           echo "tag_name=${CLEAN_TAG#v}" >> $GITHUB_OUTPUT
 
+      - name: Rename Release Files
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/${{ github.event.repository.name }}-${{ steps.clean_tag.outputs.tag_name }}.apk"     
+
       - name: Create GitHub Release and Upload APK
         uses: softprops/action-gh-release@v2
         with:
@@ -60,4 +64,4 @@ jobs:
           name: Release ${{ github.event.inputs.tagName }}
           draft: true
           files: |
-            app/build/outputs/apk/release/app-release.apk > ${{ github.event.repository.name }}-${{ github.ref_name }}.apk
+            app/build/outputs/apk/release/*.apk
