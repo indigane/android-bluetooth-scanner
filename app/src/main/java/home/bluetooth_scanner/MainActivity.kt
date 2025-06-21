@@ -11,6 +11,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.widget.Button
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import android.app.Activity
@@ -28,8 +31,14 @@ class MainActivity : AppCompatActivity() {
     private var bluetoothLeScanner: BluetoothLeScanner? = null
     private val discoveredDevices = mutableListOf<BleDevice>()
     private lateinit var bleDeviceAdapter: BleDeviceAdapter
-    // Removed: private lateinit var debugTextView: TextView
     private var topVisibleDeviceBeforeSortUpdate: BleDevice? = null
+
+    private lateinit var nearbyDevicesPermissionText: TextView
+    private lateinit var requestNearbyDevicesPermissionButton: Button
+    private lateinit var locationPermissionText: TextView
+    private lateinit var requestLocationPermissionButton: Button
+    private lateinit var devicesRecyclerView: RecyclerView
+
 
     private val leScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -85,7 +94,7 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 Log.d("ScanCallback", "Inside runOnUiThread: Processing devices for UI update.")
 
-                val layoutManager = (findViewById<RecyclerView>(R.id.devicesRecyclerView).layoutManager as LinearLayoutManager)
+                val layoutManager = (devicesRecyclerView.layoutManager as LinearLayoutManager)
                 val firstCompletelyVisibleItemPosition = layoutManager.findFirstCompletelyVisibleItemPosition()
                 if (firstCompletelyVisibleItemPosition == 0 && bleDeviceAdapter.currentList.isNotEmpty()) {
                     // Check if currentList is not empty to avoid IndexOutOfBoundsException
@@ -108,8 +117,6 @@ class MainActivity : AppCompatActivity() {
                 // Sort the list first
                 discoveredDevices.sortWith(compareByDescending<BleDevice> { it.smoothedRssi }.thenBy { it.address })
 
-                // Removed debug text update block
-
                 // Submit the sorted list to the adapter
                 bleDeviceAdapter.submitList(discoveredDevices.toList())
                 Log.d("ScanCallback", "Adapter updated. Item count: ${bleDeviceAdapter.itemCount}")
@@ -124,8 +131,6 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             Log.i("ScanCallback", "Batch Scan Results: ${results.size} devices found.")
-            // Detailed per-result processing for batch results is not implemented.
-            // onScanResult is used for individual device processing.
         }
 
         override fun onScanFailed(errorCode: Int) {
@@ -144,50 +149,79 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val PERMISSIONS = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    private val NEARBY_DEVICES_PERMISSIONS = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
             Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_FINE_LOCATION
+            Manifest.permission.BLUETOOTH_CONNECT
         )
     } else {
         arrayOf(
             Manifest.permission.BLUETOOTH,
-            Manifest.permission.BLUETOOTH_ADMIN,
-            Manifest.permission.ACCESS_FINE_LOCATION
+            Manifest.permission.BLUETOOTH_ADMIN
+            // ACCESS_FINE_LOCATION is requested separately now
         )
     }
 
-    private fun hasPermissions(): Boolean {
-        Log.d("MainActivity", "Checking permissions...")
-        // Removed PERMISSIONS.isEmpty() check as for loop handles it.
-        for (permission in PERMISSIONS) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                Log.w("MainActivity", "Permission not granted: $permission") // Log only the first one not granted
-                return false
-            }
+    private val LOCATION_PERMISSION = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+
+    private fun hasNearbyDevicesPermission(): Boolean {
+        return NEARBY_DEVICES_PERMISSIONS.all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
-        Log.i("MainActivity", "All required permissions are granted.")
-        return true
     }
 
-    private fun requestPermissions() {
-        Log.i("MainActivity", "Requesting permissions: ${PERMISSIONS.joinToString(", ")}")
-        ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_PERMISSIONS)
+    private fun hasLocationPermission(): Boolean {
+        return LOCATION_PERMISSION.all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun updatePermissionUI() {
+        val nearbyGranted = hasNearbyDevicesPermission()
+        val locationGranted = hasLocationPermission()
+
+        nearbyDevicesPermissionText.visibility = if (nearbyGranted) View.GONE else View.VISIBLE
+        requestNearbyDevicesPermissionButton.visibility = if (nearbyGranted) View.GONE else View.VISIBLE
+
+        locationPermissionText.visibility = if (locationGranted) View.GONE else View.VISIBLE
+        requestLocationPermissionButton.visibility = if (locationGranted) View.GONE else View.VISIBLE
+
+        if (nearbyGranted && locationGranted) {
+            devicesRecyclerView.visibility = View.VISIBLE
+            checkBluetoothStateAndStartScan()
+        } else {
+            devicesRecyclerView.visibility = View.GONE
+            // Stop scan if it's running and permissions are revoked
+            if (bluetoothLeScanner != null && (bluetoothAdapter?.isEnabled == true)) {
+                 // Check for BLUETOOTH_SCAN permission before stopping, though it might not be strictly necessary for stop if already started.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
+                        stopBleScan()
+                    } else {
+                        Log.w("MainActivity", "BLUETOOTH_SCAN not granted, cannot definitively stop scan if it was running with it.")
+                    }
+                } else {
+                     // For older versions, no specific separate permission needed to stop.
+                    stopBleScan()
+                }
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Removed: debugTextView = findViewById(R.id.debugTextView)
-        bleDeviceAdapter = BleDeviceAdapter()
-        val recyclerView: RecyclerView = findViewById(R.id.devicesRecyclerView)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = bleDeviceAdapter
+        nearbyDevicesPermissionText = findViewById(R.id.nearbyDevicesPermissionText)
+        requestNearbyDevicesPermissionButton = findViewById(R.id.requestNearbyDevicesPermissionButton)
+        locationPermissionText = findViewById(R.id.locationPermissionText)
+        requestLocationPermissionButton = findViewById(R.id.requestLocationPermissionButton)
+        devicesRecyclerView = findViewById(R.id.devicesRecyclerView)
 
-        // Add this line to disable change animations
-        (recyclerView.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
+        bleDeviceAdapter = BleDeviceAdapter()
+        devicesRecyclerView.layoutManager = LinearLayoutManager(this)
+        devicesRecyclerView.adapter = bleDeviceAdapter
+        (devicesRecyclerView.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
 
         val scrollObserver = object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
@@ -197,37 +231,45 @@ class MainActivity : AppCompatActivity() {
 
             override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) {
                 super.onItemRangeMoved(fromPosition, toPosition, itemCount)
-                // It's possible a move operation also requires scroll adjustment,
-                // especially if items are moved to the top.
                 handleScrollAdjustment()
             }
         }
         bleDeviceAdapter.registerAdapterDataObserver(scrollObserver)
 
+        requestNearbyDevicesPermissionButton.setOnClickListener {
+            ActivityCompat.requestPermissions(this, NEARBY_DEVICES_PERMISSIONS, REQUEST_NEARBY_DEVICES_PERMISSIONS)
+        }
+
+        requestLocationPermissionButton.setOnClickListener {
+            ActivityCompat.requestPermissions(this, LOCATION_PERMISSION, REQUEST_LOCATION_PERMISSION)
+        }
+
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter = bluetoothManager.adapter // Initialize class member
+        bluetoothAdapter = bluetoothManager.adapter
 
         if (bluetoothAdapter == null) {
             Log.e("MainActivity", "BluetoothAdapter not available on this device.")
-            // Handle this case: inform user, disable BLE features
-            return // Cannot proceed with BLE setup
+            // Potentially show a message to the user, disable UI elements that need BT
+            nearbyDevicesPermissionText.text = "Bluetooth is not available on this device."
+            locationPermissionText.visibility = View.GONE // Hide location if BT itself is not available.
+            requestNearbyDevicesPermissionButton.visibility = View.GONE
+            requestLocationPermissionButton.visibility = View.GONE
+            return
         }
 
         bluetoothLeScanner = bluetoothAdapter!!.bluetoothLeScanner
-
-        if (hasPermissions()) {
-            Log.d("MainActivity", "Permissions already granted on create.")
-            checkBluetoothStateAndStartScan()
-        } else {
-            Log.i("MainActivity", "Requesting permissions on create.")
-            requestPermissions()
-        }
+        updatePermissionUI() // Initial UI setup based on current permissions
     }
 
     private fun checkBluetoothStateAndStartScan() {
+        if (!hasNearbyDevicesPermission() || !hasLocationPermission()) {
+            Log.w("MainActivity", "Attempted to check Bluetooth state without all required permissions.")
+            updatePermissionUI() // Ensure UI reflects missing permissions
+            return
+        }
+
         if (bluetoothAdapter == null) {
             Log.e("MainActivity", "BluetoothAdapter not initialized")
-            // Consider user feedback for this critical error (e.g., a Toast or Dialog).
             return
         }
 
@@ -235,16 +277,18 @@ class MainActivity : AppCompatActivity() {
             Log.i("MainActivity", "Bluetooth is not enabled. Requesting user to enable it.")
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
 
-            // Check if BLUETOOTH_CONNECT permission is granted before starting activity
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // BLUETOOTH_CONNECT is part of NEARBY_DEVICES_PERMISSIONS, which should be granted if we reach here.
+                // However, a direct check before startActivityForResult is good practice.
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
                     startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
                 } else {
-                    Log.e("MainActivity", "BLUETOOTH_CONNECT permission not granted, cannot request to enable Bluetooth.")
-                    // Consider informing user they need to grant BLUETOOTH_CONNECT or enable BT manually.
+                    Log.e("MainActivity", "BLUETOOTH_CONNECT permission not granted, cannot request to enable Bluetooth. This should not happen if hasNearbyDevicesPermission() passed.")
+                    // This state indicates a logic flaw or permission being revoked between checks.
+                    // Update UI to re-prompt for nearby devices permissions.
+                    updatePermissionUI()
                 }
             } else {
-                // For older Android versions, no specific BLUETOOTH_CONNECT permission needed for this action.
                 startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
             }
         } else {
@@ -258,116 +302,122 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_ENABLE_BT) {
             if (resultCode == Activity.RESULT_OK) {
                 Log.d("MainActivity", "Bluetooth has been enabled by the user.")
-                startBleScan()
+                startBleScan() // Permissions should already be granted if we reach here
             } else {
                 Log.w("MainActivity", "User did not enable Bluetooth or cancelled the request.")
-                // Consider showing a message to the user that Bluetooth is required for BLE scanning.
+                // Optionally, show a message that Bluetooth is needed. The UI should still reflect permission status.
+                // updatePermissionUI() // Could call this to ensure UI is consistent, though not strictly necessary if only BT enable was cancelled.
             }
         }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_PERMISSIONS) {
-            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                Log.d("MainActivity", "All permissions granted by user.")
-                checkBluetoothStateAndStartScan()
-            } else {
-                Log.w("MainActivity", "Not all permissions were granted by user.")
-                // Consider showing an explanation to the user about why permissions are needed.
+        Log.d("MainActivity", "onRequestPermissionsResult: requestCode=$requestCode")
+        when (requestCode) {
+            REQUEST_NEARBY_DEVICES_PERMISSIONS, REQUEST_LOCATION_PERMISSION -> {
+                // Even if one specific group was requested, update UI based on the overall state of both.
+                updatePermissionUI()
             }
         }
     }
 
     private fun startBleScan() {
         Log.d("MainActivity", "Attempting to start BLE scan...")
-        if (!hasPermissions()) {
-            Log.w("MainActivity", "Attempted to start scan without all permissions.")
-            requestPermissions() // Or inform user about the need for permissions.
+        if (!hasNearbyDevicesPermission() || !hasLocationPermission()) {
+            Log.w("MainActivity", "Attempted to start scan without all required permissions.")
+            updatePermissionUI() // Update UI to show missing permission prompts.
             return
         }
 
         if (bluetoothAdapter == null || !bluetoothAdapter!!.isEnabled) {
             Log.w("MainActivity", "Bluetooth adapter not available or not enabled. Cannot start scan.")
-            // Optionally, can call checkBluetoothStateAndStartScan() to re-trigger enable flow, or inform user.
+            // Call checkBluetoothStateAndStartScan() to re-trigger enable flow if appropriate,
+            // but ensure it doesn't create a loop if permissions are the issue.
+            // updatePermissionUI() will typically handle prompting if permissions are missing.
+            // If BT is just disabled, checkBluetoothStateAndStartScan would handle the enable intent.
+            // For now, simply returning as checkBluetoothStateAndStartScan should be the entry point.
             return
         }
 
-        // Defensive check for BLUETOOTH_SCAN permission (API 31+), though hasPermissions() should cover it.
+        // Specific permission checks before scan (BLUETOOTH_SCAN for S+)
+        // These should be covered by hasNearbyDevicesPermission, but being explicit can help debugging.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-                Log.e("MainActivity", "BLUETOOTH_SCAN permission not granted. Cannot start scan.")
+                Log.e("MainActivity", "BLUETOOTH_SCAN permission not granted. Cannot start scan. This indicates an issue with permission state.")
+                updatePermissionUI() // Should show the prompt for nearby devices.
                 return
             }
         }
+        // For older versions, ACCESS_FINE_LOCATION is crucial for scan results.
+        // This is covered by hasLocationPermission().
 
         Log.i("MainActivity", "Starting BLE scan.")
-        // Scan settings or filters can be added here if specific scanning behavior is needed.
         bluetoothLeScanner?.startScan(leScanCallback)
-        // An 'isScanning' state variable could be managed here for UI updates.
     }
 
     private fun stopBleScan() {
         Log.d("MainActivity", "Attempting to stop BLE scan...")
-        if (bluetoothAdapter == null || !bluetoothAdapter!!.isEnabled) {
-             Log.w("MainActivity", "Bluetooth adapter not available or not enabled. Cannot stop scan.")
+        if (bluetoothAdapter == null ) { // Removed !bluetoothAdapter!!.isEnabled check as we might want to stop even if BT was disabled after scan started.
+             Log.w("MainActivity", "Bluetooth adapter not available. Cannot stop scan.")
              return
         }
         // Check BLUETOOTH_SCAN permission before stopping scan (API 31+).
-        // While stopScan might not strictly require it if startScan did, logging helps ensure consistency.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-                Log.e("MainActivity", "BLUETOOTH_SCAN permission not granted. Cannot stop scan effectively.")
+                Log.w("MainActivity", "BLUETOOTH_SCAN permission not granted. May not be able to stop scan effectively if it requires this permission to interact with the scanner.")
+                // Depending on Android version and specific device behavior, stopScan might still work or fail silently.
             }
         }
+        // No specific permission usually required to stop for older versions if it was started.
         bluetoothLeScanner?.stopScan(leScanCallback)
         Log.i("MainActivity", "BLE scan stopped.")
-        // 'isScanning' state variable could be updated here.
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // When the app resumes, permissions might have changed from settings.
+        // Re-evaluate and update the UI accordingly.
+        if (bluetoothAdapter != null) { // Only if BT adapter exists
+             updatePermissionUI()
+        }
     }
 
     private fun handleScrollAdjustment() {
-        val layoutManager = (findViewById<RecyclerView>(R.id.devicesRecyclerView).layoutManager as LinearLayoutManager)
+        val layoutManager = (devicesRecyclerView.layoutManager as LinearLayoutManager)
         val currentTopDevice = this@MainActivity.topVisibleDeviceBeforeSortUpdate
 
         if (currentTopDevice != null) {
-            // Find the new position of the device we tracked
             val newIndexOfTrackedDevice = bleDeviceAdapter.currentList.indexOfFirst { it.address == currentTopDevice.address }
 
             if (newIndexOfTrackedDevice != -1 && newIndexOfTrackedDevice > 0) {
-                // The tracked device is still in the list and is no longer at the top.
-                // This means new items were effectively inserted above it.
                 Log.d("MainActivity", "Adjusting scroll. Tracked device ${currentTopDevice.address} moved to $newIndexOfTrackedDevice. Scrolling to top.")
-                findViewById<RecyclerView>(R.id.devicesRecyclerView).scrollToPosition(0)
+                devicesRecyclerView.scrollToPosition(0)
             } else if (newIndexOfTrackedDevice == 0) {
                  Log.d("MainActivity", "No scroll adjustment needed. Tracked device ${currentTopDevice.address} is still at the top.")
             } else {
                  Log.d("MainActivity", "No scroll adjustment. Tracked device ${currentTopDevice.address} not found in the new list or list is empty.")
             }
-            // Important: Reset for the next scan cycle AFTER processing.
             this@MainActivity.topVisibleDeviceBeforeSortUpdate = null
-        } else {
-            // Log.d("MainActivity", "No scroll adjustment needed, topVisibleDeviceBeforeSortUpdate was null.")
-            // No specific device was being tracked from the previous state.
         }
     }
 
-    // @VisibleForTesting // Uncomment if you have the annotation dependency
     fun getDiscoveredDevicesListForTest(): MutableList<BleDevice> {
         return discoveredDevices
     }
 
-    // @VisibleForTesting // Uncomment if you have the annotation dependency
     fun setTopVisibleDeviceBeforeSortUpdateForTest(device: BleDevice?) {
         this.topVisibleDeviceBeforeSortUpdate = device
     }
 
-    // @VisibleForTesting // Uncomment if you have the annotation dependency
     fun getTopVisibleDeviceBeforeSortUpdateForTest(): BleDevice? {
         return this.topVisibleDeviceBeforeSortUpdate
     }
 
     companion object {
-        private const val REQUEST_PERMISSIONS = 1
+        // Removed: private const val REQUEST_PERMISSIONS = 1 (No longer used for combined request)
         private const val REQUEST_ENABLE_BT = 2
+        private const val REQUEST_NEARBY_DEVICES_PERMISSIONS = 101
+        private const val REQUEST_LOCATION_PERMISSION = 102
     }
 }
