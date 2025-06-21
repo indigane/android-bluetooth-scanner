@@ -59,12 +59,29 @@
             tools:visibility="visible" />
     </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/devicesRecyclerView"
+    <FrameLayout
+        android:id="@+id/dataContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone"
-        tools:visibility="visible"
-        tools:listitem="@layout/item_ble_device" />
+        android:visibility="gone">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/devicesRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            tools:listitem="@layout/item_ble_device" />
+
+        <TextView
+            android:id="@+id/noDevicesTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:text="@string/no_devices_found"
+            android:visibility="gone"
+            android:padding="16dp"
+            tools:visibility="visible" />
+    </FrameLayout>
 
 </LinearLayout>
