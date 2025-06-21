@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var requestLocationPermissionButton: Button
     private lateinit var devicesRecyclerView: RecyclerView
     private lateinit var permissionRequestContainer: View
+    private lateinit var noDevicesTextView: TextView
 
 
     private val leScanCallback = object : ScanCallback() {
@@ -121,6 +122,7 @@ class MainActivity : AppCompatActivity() {
                 // Submit the sorted list to the adapter
                 bleDeviceAdapter.submitList(discoveredDevices.toList())
                 Log.d("ScanCallback", "Adapter updated. Item count: ${bleDeviceAdapter.itemCount}")
+                updateNoDevicesMessageVisibility()
             }
         }
 
@@ -189,11 +191,14 @@ class MainActivity : AppCompatActivity() {
 
         if (nearbyGranted && locationGranted) {
             permissionRequestContainer.visibility = View.GONE
-            devicesRecyclerView.visibility = View.VISIBLE
+            // Visibility of devicesRecyclerView and noDevicesTextView is handled by updateNoDevicesMessageVisibility
+            // which is called by checkBluetoothStateAndStartScan (via startBleScan) or directly if already scanning.
             checkBluetoothStateAndStartScan()
+            updateNoDevicesMessageVisibility() // Explicitly call here to cover cases where scan doesn't restart but UI should update
         } else {
             permissionRequestContainer.visibility = View.VISIBLE
-            devicesRecyclerView.visibility = View.GONE
+            devicesRecyclerView.visibility = View.GONE // Hide list if permissions are not granted
+            noDevicesTextView.visibility = View.GONE // Also hide no devices message
             // Stop scan if it's running and permissions are revoked
             if (bluetoothLeScanner != null && (bluetoothAdapter?.isEnabled == true)) {
                  // Check for BLUETOOTH_SCAN permission before stopping, though it might not be strictly necessary for stop if already started.
@@ -221,6 +226,7 @@ class MainActivity : AppCompatActivity() {
         requestLocationPermissionButton = findViewById(R.id.requestLocationPermissionButton)
         devicesRecyclerView = findViewById(R.id.devicesRecyclerView)
         permissionRequestContainer = findViewById(R.id.permissionRequestContainer)
+        noDevicesTextView = findViewById(R.id.noDevicesTextView)
 
         bleDeviceAdapter = BleDeviceAdapter()
         devicesRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -357,6 +363,9 @@ class MainActivity : AppCompatActivity() {
         // This is covered by hasLocationPermission().
 
         Log.i("MainActivity", "Starting BLE scan.")
+        discoveredDevices.clear() // Clear previous results
+        bleDeviceAdapter.submitList(emptyList()) // Update adapter immediately
+        updateNoDevicesMessageVisibility() // Show "no devices" message initially
         bluetoothLeScanner?.startScan(leScanCallback)
     }
 
@@ -376,6 +385,8 @@ class MainActivity : AppCompatActivity() {
         // No specific permission usually required to stop for older versions if it was started.
         bluetoothLeScanner?.stopScan(leScanCallback)
         Log.i("MainActivity", "BLE scan stopped.")
+        // After stopping the scan, update the visibility based on whether devices were found
+        updateNoDevicesMessageVisibility()
     }
 
     override fun onResume() {
@@ -383,7 +394,17 @@ class MainActivity : AppCompatActivity() {
         // When the app resumes, permissions might have changed from settings.
         // Re-evaluate and update the UI accordingly.
         if (bluetoothAdapter != null) { // Only if BT adapter exists
-             updatePermissionUI()
+             updatePermissionUI() // This will also call updateNoDevicesMessageVisibility
+        }
+    }
+
+    private fun updateNoDevicesMessageVisibility() {
+        if (discoveredDevices.isEmpty()) {
+            noDevicesTextView.visibility = View.VISIBLE
+            devicesRecyclerView.visibility = View.GONE
+        } else {
+            noDevicesTextView.visibility = View.GONE
+            devicesRecyclerView.visibility = View.VISIBLE
         }
     }
 
