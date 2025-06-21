@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var requestLocationPermissionButton: Button
     private lateinit var devicesRecyclerView: RecyclerView
     private lateinit var permissionRequestContainer: View
+    private lateinit var dataContainer: View
     private lateinit var noDevicesTextView: TextView
 
 
@@ -122,7 +123,9 @@ class MainActivity : AppCompatActivity() {
                 // Submit the sorted list to the adapter
                 bleDeviceAdapter.submitList(discoveredDevices.toList())
                 Log.d("ScanCallback", "Adapter updated. Item count: ${bleDeviceAdapter.itemCount}")
-                updateNoDevicesMessageVisibility()
+                if (permissionRequestContainer.visibility == View.GONE) { // Only update if permissions are granted
+                    updateNoDevicesMessageVisibility()
+                }
             }
         }
 
@@ -191,14 +194,12 @@ class MainActivity : AppCompatActivity() {
 
         if (nearbyGranted && locationGranted) {
             permissionRequestContainer.visibility = View.GONE
-            // Visibility of devicesRecyclerView and noDevicesTextView is handled by updateNoDevicesMessageVisibility
-            // which is called by checkBluetoothStateAndStartScan (via startBleScan) or directly if already scanning.
+            dataContainer.visibility = View.VISIBLE
+            updateNoDevicesMessageVisibility() // Update based on current discoveredDevices
             checkBluetoothStateAndStartScan()
-            updateNoDevicesMessageVisibility() // Explicitly call here to cover cases where scan doesn't restart but UI should update
         } else {
             permissionRequestContainer.visibility = View.VISIBLE
-            devicesRecyclerView.visibility = View.GONE // Hide list if permissions are not granted
-            noDevicesTextView.visibility = View.GONE // Also hide no devices message
+            dataContainer.visibility = View.GONE
             // Stop scan if it's running and permissions are revoked
             if (bluetoothLeScanner != null && (bluetoothAdapter?.isEnabled == true)) {
                  // Check for BLUETOOTH_SCAN permission before stopping, though it might not be strictly necessary for stop if already started.
@@ -226,6 +227,7 @@ class MainActivity : AppCompatActivity() {
         requestLocationPermissionButton = findViewById(R.id.requestLocationPermissionButton)
         devicesRecyclerView = findViewById(R.id.devicesRecyclerView)
         permissionRequestContainer = findViewById(R.id.permissionRequestContainer)
+        dataContainer = findViewById(R.id.dataContainer)
         noDevicesTextView = findViewById(R.id.noDevicesTextView)
 
         bleDeviceAdapter = BleDeviceAdapter()
@@ -363,9 +365,11 @@ class MainActivity : AppCompatActivity() {
         // This is covered by hasLocationPermission().
 
         Log.i("MainActivity", "Starting BLE scan.")
-        discoveredDevices.clear() // Clear previous results
-        bleDeviceAdapter.submitList(emptyList()) // Update adapter immediately
-        updateNoDevicesMessageVisibility() // Show "no devices" message initially
+        discoveredDevices.clear()
+        bleDeviceAdapter.submitList(emptyList()) // Clear adapter
+        if (permissionRequestContainer.visibility == View.GONE) { // Only update if permissions are granted
+            updateNoDevicesMessageVisibility() // Show "no devices" message
+        }
         bluetoothLeScanner?.startScan(leScanCallback)
     }
 
@@ -385,8 +389,9 @@ class MainActivity : AppCompatActivity() {
         // No specific permission usually required to stop for older versions if it was started.
         bluetoothLeScanner?.stopScan(leScanCallback)
         Log.i("MainActivity", "BLE scan stopped.")
-        // After stopping the scan, update the visibility based on whether devices were found
-        updateNoDevicesMessageVisibility()
+        if (permissionRequestContainer.visibility == View.GONE) { // Only update if permissions are granted
+             updateNoDevicesMessageVisibility()
+        }
     }
 
     override fun onResume() {
@@ -394,11 +399,12 @@ class MainActivity : AppCompatActivity() {
         // When the app resumes, permissions might have changed from settings.
         // Re-evaluate and update the UI accordingly.
         if (bluetoothAdapter != null) { // Only if BT adapter exists
-             updatePermissionUI() // This will also call updateNoDevicesMessageVisibility
+             updatePermissionUI() // This will also call updateNoDevicesMessageVisibility if needed
         }
     }
 
     private fun updateNoDevicesMessageVisibility() {
+        // This function assumes dataContainer is already VISIBLE (i.e., permissions granted)
         if (discoveredDevices.isEmpty()) {
             noDevicesTextView.visibility = View.VISIBLE
             devicesRecyclerView.visibility = View.GONE
