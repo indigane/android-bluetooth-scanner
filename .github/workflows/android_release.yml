@@ -45,20 +45,6 @@ jobs:
           export KEYSTORE_PATH="$HOME/release.p12"
           ./gradlew assembleRelease
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.event.inputs.tagName }}
-          release_name: Release ${{ github.event.inputs.tagName }}
-          body: |
-            Release for version ${{ github.event.inputs.tagName }}.
-            More detailed release notes to-be-written.
-          draft: true
-          prerelease: false
-
       - name: Clean up tag name
         id: clean_tag
         run: |
@@ -66,12 +52,12 @@ jobs:
           CLEAN_TAG=${{ github.event.inputs.tagName }}
           echo "tag_name=${CLEAN_TAG#v}" >> $GITHUB_OUTPUT
 
-      - name: Upload Release APK
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release and Upload APK
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/release/app-release.apk
-          asset_name: ${{ github.event.repository.name }}-${{ steps.clean_tag.outputs.tag_name }}.apk
-          asset_content_type: application/vnd.android.package-archive
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.event.inputs.tagName }}
+          name: Release ${{ github.event.inputs.tagName }}
+          draft: true
+          files: |
+            app/build/outputs/apk/release/app-release.apk > ${{ github.event.repository.name }}-${{ github.ref_name }}.apk
